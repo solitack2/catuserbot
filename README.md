@@ -1,65 +1,242 @@
-# CatUserbot
+# 🚀 ربات پیشرفته ارسال پیام خصوصی تلگرام
 
-A simple Telegram userbot based on Telethon .
-![catuserbot logo](https://graph.org/file/4860c8e1a5a56d0616b79.png)
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fsandy1709%2Fcatuserbot&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://github.com/TgCatUB/catuserbot)
-[![CodeFactor](https://www.codefactor.io/repository/github/TgCatUB/catuserbot/badge?&style=flat-square)](https://www.codefactor.io/repository/github/TgCatUB/catuserbot)
-[![Open Source Love](https://badges.frapsoft.com/os/v2/open-source.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green?&style=flat-square)](https://GitHub.com/TgCatUB/catuserbot/graphs/commit-activity)
-![Repo Size](https://img.shields.io/github/repo-size/TgCatUB/catuserbot?&style=flat-square&logo=github)
-[![GitHub license](https://img.shields.io/github/license/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/blob/master/LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/issues)
-[![PR Open](https://img.shields.io/github/issues-pr/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/pulls)
-[![PR Closed](https://img.shields.io/github/issues-pr-closed/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/pulls?q=is:closed)
-[![GitHub contributors](https://img.shields.io/github/contributors/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://GitHub.com/TgCatUB/catuserbot/graphs/contributors/)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/graphs/commit-activity)
-[![GitHub forks](https://img.shields.io/github/forks/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/fork)
-[![GitHub stars](https://img.shields.io/github/stars/TgCatUB/catuserbot?&style=flat-square&logo=github)](https://github.com/TgCatUB/catuserbot/stargazers)
+یک ربات قدرتمند و پیشرفته برای مدیریت چندین اکانت تلگرام و ارسال پیام‌های خصوصی با قابلیت‌های آنالیز پیشرفته، کنترل سرعت ارسال و مدیریت کاربران.
 
-## How to deploy catuserbot
+## ✨ ویژگی‌های اصلی
 
-### Heroku Deploy
+### 📱 مدیریت چندین اکانت
+- افزودن و مدیریت چندین اکانت تلگرام
+- احراز هویت خودکار و ذخیره جلسات
+- نمایش وضعیت و آمار هر اکانت
+- بارگذاری خودکار اکانت‌ها در هنگام شروع
 
-- [![Deploy To Heroku](https://www.herokucdn.com/deploy/button.svg)](https://github.com/TgCatUB/nekopack)
+### 📤 ارسال پیام‌های خصوصی
+- ارسال پیام تکی به کاربران
+- ارسال گروهی با کنترل سرعت
+- پشتیبانی از انواع پیام (متن، عکس، فایل)
+- سیستم تاخیر هوشمند برای جلوگیری از محدودیت
 
-### Self host
+### 📊 آنالیز و آمارگیری پیشرفته
+- آمار کامل پیام‌های ارسالی
+- نمودارهای عملکرد و نرخ موفقیت
+- تحلیل خطاها و پیشنهادات بهبود
+- گزارش‌های تفصیلی روزانه و ساعتی
 
-- [**Check Docs**](https://tgcatub.gitbook.io/catuserbot/installation/hosting)
-  
-## Support
+### 🔧 قابلیت‌های پیشرفته
+- قالب‌های پیام قابل تنظیم
+- جستجوی پیشرفته کاربران
+- سیستم لاگ کامل
+- رابط کاربری زیبا با کیبوردهای شیشه‌ای
+- کنترل دسترسی بر اساس ID مالک
 
-   <a href="https://t.me/catuserbot17"><img src="https://img.shields.io/badge/Channel%20Support%3F-yes-green?&style=flat-square?&logo=telegram" width=220px></a></p>
-   <a href="https://t.me/catuserbot_support"><img src="https://img.shields.io/badge/Group%20Support%3F-yes-green?&style=flat-square?&logo=telegram" width=220px></a></p>
+## 🛠 نصب و راه‌اندازی
 
-## Inspiration
+### پیش‌نیازها
+- Python 3.8 یا بالاتر
+- یک ربات تلگرام (دریافت توکن از @BotFather)
+- API credentials از my.telegram.org
 
-- [X-tra-Telegram](https://github.com/Dark-Princ3/X-tra-Telegram)
-- [Uniborg](https://github.com/SpEcHiDe/UniBorg) & [Uniborg fork](https://github.com/ravana69/PornHub)
-- Nana-Remix
-- [Userge-X](https://github.com/code-rgb/USERGE-X/)
+### مراحل نصب
 
-## Disclaimer
-
-```
-              YOU ARE FOREWARNED
-Your Telegram account may get banned.   
-Catuserbot or we are not responsible for your account, 
-This bot is intended for the purpose of having fun with some fun commands 
-and group management with some helpfull commands.
-
-If  you ended up spamming groups, getting reported left and right, 
-and you ended up in being fight with Telegram 
-and at the end Telegram Team deleted your account. DON'T BLAME US.
-
-No personal support will be provided / We won't spoon feed you. 
-If you need help ask in our support group 
-and we or our friends will try to help you.
-
-Thanks for using our bot 😺
+1. **کلون کردن پروژه:**
+```bash
+git clone <repository-url>
+cd telegram-sender-bot
 ```
 
-## Credits
+2. **نصب وابستگی‌ها:**
+```bash
+pip install -r requirements.txt
+```
 
-- Special thanks to [LonamiWebs](https://github.com/LonamiWebs/Telethon/) for Telethon library.
-- To all devs of these [Userbots](https://github.com/TgCatUB/catuserbot/tree/bugs#inspiration)
-- Finally to all [contributors of Catuserbot](https://github.com/TgCatUB/catuserbot/graphs/contributors)
+3. **تنظیم متغیرهای محیطی:**
+```bash
+cp .env.example .env
+# ویرایش فایل .env و تنظیم مقادیر
+```
+
+4. **اجرای ربات:**
+```bash
+python main.py
+```
+
+## ⚙️ تنظیمات
+
+### فایل .env
+```env
+# اطلاعات ربات
+BOT_TOKEN=your_bot_token_here
+OWNER_ID=your_telegram_user_id
+
+# اطلاعات API تلگرام (اختیاری)
+API_ID=your_api_id
+API_HASH=your_api_hash
+
+# تنظیمات اختیاری
+LOG_LEVEL=INFO
+MAX_MESSAGES_PER_MINUTE=20
+DELAY_BETWEEN_MESSAGES=3
+```
+
+### دریافت اطلاعات API
+1. به https://my.telegram.org بروید
+2. وارد حساب خود شوید
+3. API development tools را انتخاب کنید
+4. یک اپلیکیشن جدید ایجاد کنید
+5. API ID و API Hash را کپی کنید
+
+## 📖 نحوه استفاده
+
+### 1. شروع کار
+```
+/start - نمایش منوی اصلی
+```
+
+### 2. افزودن اکانت
+1. از منو "📱 مدیریت اکانت‌ها" را انتخاب کنید
+2. "➕ افزودن اکانت جدید" را کلیک کنید
+3. شماره تلفن، API ID و API Hash را وارد کنید
+4. کد تایید دریافتی را ارسال کنید
+
+### 3. ارسال پیام
+1. از منو "📤 ارسال پیام" را انتخاب کنید
+2. نوع ارسال (تکی یا گروهی) را انتخاب کنید
+3. اکانت مورد نظر را انتخاب کنید
+4. شناسه یا یوزرنیم کاربر مقصد را وارد کنید
+5. پیام خود را ارسال کنید
+
+### 4. مشاهده آمار
+- از منو "📊 آنالیز و آمار" استفاده کنید
+- آمار روزانه و کلی را مشاهده کنید
+- نمودارهای عملکرد را دریافت کنید
+
+## 🏗 ساختار پروژه
+
+```
+telegram-sender-bot/
+├── main.py              # فایل اصلی اجرا
+├── bot.py               # ربات تلگرام و هندلرها
+├── sender.py            # سیستم ارسال پیام
+├── database.py          # مدیریت پایگاه داده
+├── analytics.py         # آنالیز و آمارگیری
+├── config.py            # تنظیمات برنامه
+├── requirements.txt     # وابستگی‌ها
+├── .env.example         # نمونه فایل تنظیمات
+├── README.md           # مستندات
+└── sessions/           # فایل‌های جلسه اکانت‌ها
+```
+
+## 🔒 امنیت
+
+### حفاظت از داده‌ها
+- تمام جلسات محلی ذخیره می‌شوند
+- رمزگذاری داده‌های حساس
+- لاگ‌های امنیتی کامل
+
+### کنترل دسترسی
+- تنها مالک ربات (OWNER_ID) دسترسی دارد
+- احراز هویت در هر درخواست
+- محدودیت‌های امنیتی Telegram
+
+### بهترین شیوه‌ها
+- استفاده از تاخیر بین پیام‌ها
+- رعایت محدودیت‌های Telegram
+- مانیتورینگ خطاها و محدودیت‌ها
+
+## 📊 API و توسعه
+
+### ساختار پایگاه داده
+```sql
+-- جدول اکانت‌ها
+accounts (id, phone, session_name, api_id, api_hash, first_name, last_name, username, is_active, created_at, last_used, total_sent)
+
+-- جدول پیام‌ها
+messages (id, account_id, target_user_id, target_username, message_text, message_type, status, sent_at, error_message, created_at)
+
+-- جدول آنالیز
+analytics (id, date, account_id, total_sent, successful_sent, failed_sent, unique_recipients)
+
+-- جدول قالب‌ها
+templates (id, name, content, created_at)
+
+-- جدول تنظیمات
+settings (key, value, updated_at)
+```
+
+### توسعه قابلیت‌های جدید
+1. کلاس‌های موجود را گسترش دهید
+2. هندلرهای جدید به bot.py اضافه کنید
+3. روش‌های آنالیز جدید در analytics.py
+4. تنظیمات جدید در config.py
+
+## 🐛 عیب‌یابی
+
+### مشکلات رایج
+
+**خطای "Bot token not found":**
+- فایل .env را بررسی کنید
+- توکن ربات را از @BotFather دریافت کنید
+
+**خطای "Phone number invalid":**
+- شماره تلفن را با کد کشور وارد کنید (+98...)
+- از شماره‌های معتبر استفاده کنید
+
+**خطای "Session password needed":**
+- رمز عبور دو مرحله‌ای را وارد کنید
+- یا آن را موقتاً غیرفعال کنید
+
+**خطای "Flood wait":**
+- تاخیر بین پیام‌ها را افزایش دهید
+- از چندین اکانت استفاده کنید
+
+### لاگ‌ها
+```bash
+# مشاهده لاگ‌ها
+tail -f bot.log
+
+# تنظیم سطح لاگ در .env
+LOG_LEVEL=DEBUG
+```
+
+## 🤝 مشارکت
+
+### گزارش باگ
+1. Issue جدید در GitHub ایجاد کنید
+2. توضیح کاملی از مشکل ارائه دهید
+3. لاگ‌های مربوطه را ضمیمه کنید
+
+### پیشنهاد ویژگی
+1. Feature request در GitHub ایجاد کنید
+2. جزئیات کامل ویژگی مورد نظر
+3. مثال‌هایی از کاربرد ارائه دهید
+
+### کد نویسی
+1. پروژه را fork کنید
+2. branch جدید ایجاد کنید
+3. تغییرات را commit کنید
+4. Pull request ارسال کنید
+
+## 📜 مجوز
+
+این پروژه تحت مجوز MIT منتشر شده است. برای جزئیات بیشتر فایل LICENSE را مطالعه کنید.
+
+## ⚠️ هشدار قانونی
+
+- از این ربات مطابق قوانین کشور خود استفاده کنید
+- اسپم نکنید و از قوانین Telegram پیروی کنید
+- مسئولیت استفاده نامناسب بر عهده کاربر است
+- برای استفاده تجاری مجوز گرفته شود
+
+## 🆘 پشتیبانی
+
+برای دریافت پشتیبانی:
+- Issues GitHub را بررسی کنید
+- مستندات کامل را مطالعه کنید
+- در صورت نیاز issue جدید ایجاد کنید
+
+---
+
+**نسخه:** 1.0.0  
+**آخرین بروزرسانی:** 2024
+
+🌟 اگر این پروژه برایتان مفید بود، لطفاً یک ستاره بدهید!
