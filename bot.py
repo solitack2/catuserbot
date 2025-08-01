@@ -2,7 +2,8 @@ import asyncio
 import logging
 import json
 import os
-from typing import Dict, List
+import io
+from typing import Dict, List, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from telegram.constants import ParseMode
@@ -10,8 +11,6 @@ from sender import TelegramSender
 from database import DatabaseManager
 from config import Config
 from rich.console import Console
-from rich.table import Table
-import io
 
 class TelegramBot:
     def __init__(self):
@@ -19,6 +18,8 @@ class TelegramBot:
         self.db = DatabaseManager()
         self.console = Console()
         self.user_states = {}  # Track user conversation states
+        self.analysis_tasks = {}  # Track analysis tasks
+        self.sending_tasks = {}   # Track sending tasks
         
     def is_authorized(self, user_id: int) -> bool:
         """Check if user is authorized to use bot"""
@@ -29,220 +30,333 @@ class TelegramBot:
         user_id = update.effective_user.id
         
         if not self.is_authorized(user_id):
-            await update.message.reply_text(Config.DEFAULT_TEMPLATES['unauthorized'])
+            await update.message.reply_text(Config.MESSAGES['unauthorized'])
             return
         
         keyboard = [
-            [KeyboardButton("📱 مدیریت اکانت‌ها"), KeyboardButton("📤 ارسال پیام")],
-            [KeyboardButton("📊 آنالیز و آمار"), KeyboardButton("⚙️ تنظیمات")],
-            [KeyboardButton("📋 قالب‌های پیام"), KeyboardButton("🔍 جستجوی کاربران")]
+            [KeyboardButton("📱 مدیریت اکانت‌ها"), KeyboardButton("📊 آنالیز پیشرفته")],
+            [KeyboardButton("📤 ارسال به پیوی"), KeyboardButton("🏷️ ایجاد دسته‌بندی")],
+            [KeyboardButton("⚙️ تنظیمات"), KeyboardButton("🌐 مدیریت پروکسی")]
         ]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         
-        welcome_text = f"""
-🌟 **سلام {update.effective_user.first_name}!**
-
-به ربات پیشرفته ارسال پیام خصوصی تلگرام خوش آمدید.
-
-**قابلیت‌های اصلی:**
-• 📱 مدیریت چندین اکانت تلگرام
-• 📤 ارسال پیام خصوصی به کاربران
-• 📊 آنالیز پیشرفته و آمارگیری
-• 🔄 ارسال گروهی با کنترل سرعت
-• 📋 مدیریت قالب‌های پیام
-• 🔍 جستجوی پیشرفته کاربران
-
-برای شروع، از منوی زیر استفاده کنید:
-        """
-        
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(
+            Config.MESSAGES['welcome'], 
+            reply_markup=reply_markup, 
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     async def handle_account_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle account management"""
+        """Handle account management menu"""
         keyboard = [
-            [InlineKeyboardButton("➕ افزودن اکانت جدید", callback_data="add_account")],
-            [InlineKeyboardButton("📋 لیست اکانت‌ها", callback_data="list_accounts")],
-            [InlineKeyboardButton("🔄 بارگذاری مجدد اکانت‌ها", callback_data="reload_accounts")],
-            [InlineKeyboardButton("🏠 بازگشت به منو اصلی", callback_data="main_menu")]
+            [InlineKeyboardButton("➕ افزودن اکانت", callback_data="add_account")],
+            [InlineKeyboardButton("📋 وضعیت اکانت‌ها", callback_data="account_status")],
+            [InlineKeyboardButton("🔄 بارگذاری مجدد", callback_data="reload_accounts")],
+            [InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        text = "📱 **مدیریت اکانت‌ها**\n\nلطفا عملیات مورد نظر را انتخاب کنید:"
+        text = "📱 **مدیریت اکانت‌ها**\n\nعملیات مورد نظر را انتخاب کنید:"
         await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
     
-    async def handle_message_sending(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle message sending options"""
-        keyboard = [
-            [InlineKeyboardButton("📨 ارسال پیام تکی", callback_data="send_single")],
-            [InlineKeyboardButton("📤 ارسال گروهی", callback_data="send_bulk")],
-            [InlineKeyboardButton("📋 استفاده از قالب", callback_data="send_template")],
-            [InlineKeyboardButton("🏠 بازگشت به منو اصلی", callback_data="main_menu")]
-        ]
+    async def handle_advanced_analysis(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle advanced analysis menu"""
+        accounts = self.db.get_accounts()
+        if not accounts:
+            await update.message.reply_text("❌ ابتدا اکانت اضافه کنید!")
+            return
+        
+        keyboard = []
+        for account in accounts:
+            display_name = f"{account['first_name'] or account['phone']} ({Config.ACCOUNT_STATUS.get(account['status'], account['status'])})"
+            keyboard.append([InlineKeyboardButton(display_name, callback_data=f"analyze_{account['id']}")])
+        
+        keyboard.append([InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        text = "📤 **ارسال پیام**\n\nنوع ارسال را انتخاب کنید:"
+        text = "📊 **آنالیز پیشرفته**\n\nبا کدام اکانت می‌خواهید آنالیز کنید؟"
         await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
     
-    async def handle_analytics(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle analytics and statistics"""
-        analytics = self.sender.get_analytics(7)
+    async def handle_private_messaging(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle private messaging menu"""
+        categories = self.db.get_categories()
+        if not categories:
+            await update.message.reply_text("❌ ابتدا دسته‌بندی ایجاد کنید!")
+            return
         
-        # Create analytics text
-        text = "📊 **آنالیز و آمار (7 روز گذشته)**\n\n"
+        keyboard = []
+        for category in categories:
+            keyboard.append([InlineKeyboardButton(
+                f"{category['name']} ({category['account_count']} اکانت)", 
+                callback_data=f"send_category_{category['id']}"
+            )])
         
-        if analytics['daily_stats']:
-            text += "📈 **آمار روزانه:**\n"
-            for day_stat in analytics['daily_stats'][:5]:  # Show last 5 days
-                text += f"• {day_stat[0]}: {day_stat[1]} پیام ({day_stat[2]} موفق، {day_stat[3]} ناموفق)\n"
+        keyboard.append([InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
         
-        text += "\n👥 **آمار اکانت‌ها:**\n"
-        if analytics['account_stats']:
-            for acc_stat in analytics['account_stats']:
-                text += f"• {acc_stat[0]}: {acc_stat[2]} کل، {acc_stat[3]} امروز\n"
-        else:
-            text += "هیچ اکانتی یافت نشد.\n"
-        
+        text = "📤 **ارسال به پیوی**\n\nبا کدام دسته‌بندی می‌خواهید ارسال کنید؟"
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+    
+    async def handle_category_creation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle category creation"""
         keyboard = [
-            [InlineKeyboardButton("📊 آمار تفصیلی", callback_data="detailed_analytics")],
-            [InlineKeyboardButton("📈 نمودار آمار", callback_data="analytics_chart")],
-            [InlineKeyboardButton("🏠 بازگشت به منو اصلی", callback_data="main_menu")]
+            [InlineKeyboardButton("➕ ایجاد دسته جدید", callback_data="create_category")],
+            [InlineKeyboardButton("📋 مشاهده دسته‌ها", callback_data="view_categories")],
+            [InlineKeyboardButton("🔄 تخصیص اکانت به دسته", callback_data="assign_category")],
+            [InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
+        text = "🏷️ **مدیریت دسته‌بندی**\n\nعملیات مورد نظر را انتخاب کنید:"
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+    
+    async def handle_settings(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle settings menu"""
+        current_settings = self.db.get_all_settings()
+        
+        keyboard = [
+            [InlineKeyboardButton("📊 تعداد ارسال به پیوی", callback_data="setting_send_limit")],
+            [InlineKeyboardButton("⏰ زمان استراحت اکانت", callback_data="setting_account_rest")],
+            [InlineKeyboardButton("🌐 تنظیمات پروکسی", callback_data="setting_proxy")],
+            [InlineKeyboardButton("🔢 توزیع هش روی اکانت‌ها", callback_data="setting_hash_distribution")],
+            [InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Show current settings
+        send_limit = current_settings.get('send_limit', Config.DEFAULT_SEND_LIMIT)
+        account_rest = current_settings.get('account_rest', Config.DEFAULT_ACCOUNT_REST)
+        
+        text = f"""⚙️ **تنظیمات سیستم**
+
+📊 **تعداد ارسال فعلی:** {send_limit} پیام در هر جلسه
+⏰ **زمان استراحت:** {account_rest} ثانیه
+🌐 **پروکسی:** {'فعال' if current_settings.get('proxy_enabled') == 'true' else 'غیرفعال'}
+
+عملیات مورد نظر را انتخاب کنید:"""
+        
+        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+    
+    async def handle_proxy_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle proxy management"""
+        keyboard = [
+            [InlineKeyboardButton("➕ افزودن پروکسی", callback_data="add_proxy")],
+            [InlineKeyboardButton("📋 لیست پروکسی‌ها", callback_data="list_proxies")],
+            [InlineKeyboardButton("🔄 تخصیص پروکسی", callback_data="assign_proxy")],
+            [InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        text = "🌐 **مدیریت پروکسی**\n\nعملیات مورد نظر را انتخاب کنید:"
         await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
     
     async def callback_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle callback queries"""
         query = update.callback_query
-        user_id = query.from_user.id
-        
-        if not self.is_authorized(user_id):
-            await query.answer("شما مجاز به استفاده از این ربات نیستید.")
-            return
-        
         await query.answer()
         
-        if query.data == "add_account":
+        data = query.data
+        user_id = query.from_user.id
+        
+        # Main menu
+        if data == "main_menu":
+            await self.show_main_menu(query)
+        
+        # Account management
+        elif data == "add_account":
             await self.start_add_account(query, context)
-        elif query.data == "list_accounts":
-            await self.show_accounts_list(query, context)
-        elif query.data == "reload_accounts":
-            await self.reload_accounts(query, context)
-        elif query.data == "send_single":
-            await self.start_single_send(query, context)
-        elif query.data == "send_bulk":
-            await self.start_bulk_send(query, context)
-        elif query.data == "main_menu":
-            await self.show_main_menu(query, context)
+        elif data == "account_status":
+            await self.show_account_status(query)
+        elif data == "reload_accounts":
+            await self.reload_accounts(query)
+        
+        # Analysis
+        elif data.startswith("analyze_"):
+            account_id = int(data.split("_")[1])
+            await self.start_analysis(query, context, account_id)
+        elif data.startswith("stop_analysis_"):
+            account_id = int(data.split("_")[2])
+            await self.stop_analysis(query, account_id)
+        
+        # Categories
+        elif data == "create_category":
+            await self.start_create_category(query, context)
+        elif data == "view_categories":
+            await self.show_categories(query)
+        elif data == "assign_category":
+            await self.start_assign_category(query, context)
+        
+        # Private messaging
+        elif data.startswith("send_category_"):
+            category_id = int(data.split("_")[2])
+            await self.start_private_messaging(query, context, category_id)
+        elif data.startswith("stop_sending_"):
+            category_id = int(data.split("_")[2])
+            await self.stop_sending(query, category_id)
+        
+        # Settings
+        elif data.startswith("setting_"):
+            setting_type = data.split("_", 1)[1]
+            await self.handle_setting_change(query, context, setting_type)
+        
+        # Proxy management
+        elif data == "add_proxy":
+            await self.start_add_proxy(query, context)
+        elif data == "list_proxies":
+            await self.show_proxies(query)
+        elif data == "assign_proxy":
+            await self.start_assign_proxy(query, context)
     
-    async def start_add_account(self, query, context):
-        """Start adding new account process"""
-        text = """
-📱 **افزودن اکانت جدید**
-
-برای افزودن اکانت جدید، لطفا اطلاعات زیر را به ترتیب ارسال کنید:
-
-1️⃣ شماره تلفن (مثال: +989123456789)
-2️⃣ API ID
-3️⃣ API Hash
-
-ابتدا شماره تلفن خود را ارسال کنید:
-        """
-        
-        self.user_states[query.from_user.id] = {'action': 'add_account', 'step': 'phone'}
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
-    
-    async def show_accounts_list(self, query, context):
-        """Show list of accounts"""
-        accounts = self.sender.get_accounts_list()
-        
-        if not accounts:
-            text = "📱 **لیست اکانت‌ها**\n\nهیچ اکانتی یافت نشد. لطفا ابتدا اکانت اضافه کنید."
-        else:
-            text = "📱 **لیست اکانت‌ها**\n\n"
-            for i, account in enumerate(accounts, 1):
-                status = "🟢 فعال" if account['is_active'] else "🔴 غیرفعال"
-                name = f"{account['first_name'] or ''} {account['last_name'] or ''}".strip()
-                text += f"{i}. {name} ({account['phone']})\n"
-                text += f"   {status} | کل ارسالی: {account['total_sent']}\n\n"
-        
-        keyboard = [[InlineKeyboardButton("🏠 بازگشت", callback_data="main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
-    
-    async def reload_accounts(self, query, context):
-        """Reload all accounts"""
-        try:
-            await self.sender.load_accounts()
-            text = "✅ تمام اکانت‌ها با موفقیت بارگذاری شدند."
-        except Exception as e:
-            text = f"❌ خطا در بارگذاری اکانت‌ها: {str(e)}"
-        
-        keyboard = [[InlineKeyboardButton("🏠 بازگشت", callback_data="main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await query.edit_message_text(text, reply_markup=reply_markup)
-    
-    async def start_single_send(self, query, context):
-        """Start single message sending"""
-        accounts = self.sender.get_accounts_list()
-        
-        if not accounts:
-            text = "❌ هیچ اکانتی یافت نشد. لطفا ابتدا اکانت اضافه کنید."
-            keyboard = [[InlineKeyboardButton("🏠 بازگشت", callback_data="main_menu")]]
-        else:
-            text = "📨 **ارسال پیام تکی**\n\nاکانت مورد نظر را انتخاب کنید:"
-            keyboard = []
-            for account in accounts[:10]:  # Show max 10 accounts
-                name = f"{account['first_name'] or ''} {account['last_name'] or ''}".strip()
-                button_text = f"{name} ({account['phone']})"
-                keyboard.append([InlineKeyboardButton(button_text, callback_data=f"select_account_{account['id']}")])
-            keyboard.append([InlineKeyboardButton("🏠 بازگشت", callback_data="main_menu")])
-        
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
-    
-    async def show_main_menu(self, query, context):
+    async def show_main_menu(self, query):
         """Show main menu"""
         keyboard = [
-            [KeyboardButton("📱 مدیریت اکانت‌ها"), KeyboardButton("📤 ارسال پیام")],
-            [KeyboardButton("📊 آنالیز و آمار"), KeyboardButton("⚙️ تنظیمات")],
-            [KeyboardButton("📋 قالب‌های پیام"), KeyboardButton("🔍 جستجوی کاربران")]
+            [KeyboardButton("📱 مدیریت اکانت‌ها"), KeyboardButton("📊 آنالیز پیشرفته")],
+            [KeyboardButton("📤 ارسال به پیوی"), KeyboardButton("🏷️ ایجاد دسته‌بندی")],
+            [KeyboardButton("⚙️ تنظیمات"), KeyboardButton("🌐 مدیریت پروکسی")]
         ]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         
-        text = "🏠 **منوی اصلی**\n\nلطفا گزینه مورد نظر را انتخاب کنید:"
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
-        await context.bot.send_message(query.from_user.id, "منوی اصلی:", reply_markup=reply_markup)
+        await query.edit_message_text(
+            Config.MESSAGES['welcome'],
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def start_add_account(self, query, context):
+        """Start adding new account"""
+        self.user_states[query.from_user.id] = {
+            'action': 'add_account',
+            'step': 'phone'
+        }
+        
+        await query.edit_message_text(
+            "📱 **افزودن اکانت جدید**\n\nشماره تلفن اکانت را وارد کنید:\n\n(مثال: +989123456789)"
+        )
+    
+    async def show_account_status(self, query):
+        """Show account status with rep/non-rep info"""
+        accounts = self.db.get_accounts()
+        if not accounts:
+            await query.edit_message_text("❌ هیچ اکانتی یافت نشد!")
+            return
+        
+        # Count accounts by status
+        status_counts = {}
+        for account in accounts:
+            status = account['status']
+            status_counts[status] = status_counts.get(status, 0) + 1
+        
+        # Generate status text
+        text = "📱 **وضعیت اکانت‌ها**\n\n"
+        
+        # Summary
+        text += "📊 **خلاصه:**\n"
+        for status, count in status_counts.items():
+            status_emoji = Config.ACCOUNT_STATUS.get(status, status)
+            text += f"• {status_emoji}: {count} اکانت\n"
+        
+        text += f"\n🔢 **کل اکانت‌ها:** {len(accounts)}\n\n"
+        
+        # Detailed list
+        text += "📋 **جزئیات:**\n"
+        for i, account in enumerate(accounts[:10], 1):  # Show first 10
+            name = account['first_name'] or account['phone']
+            status_emoji = Config.ACCOUNT_STATUS.get(account['status'], account['status'])
+            premium_emoji = "💎" if account.get('is_premium') else ""
+            category = account.get('category_name', 'بدون دسته')
+            
+            text += f"{i}. {name} {premium_emoji}\n"
+            text += f"   └ {status_emoji} | دسته: {category}\n"
+            text += f"   └ کد: {account['id']} | ارسال: {account['total_sent']}\n\n"
+        
+        if len(accounts) > 10:
+            text += f"... و {len(accounts) - 10} اکانت دیگر"
+        
+        keyboard = [[InlineKeyboardButton("🔄 به‌روزرسانی", callback_data="account_status")],
+                   [InlineKeyboardButton("🏠 منوی اصلی", callback_data="main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+    
+    async def start_analysis(self, query, context, account_id):
+        """Start member analysis"""
+        account = next((acc for acc in self.db.get_accounts() if acc['id'] == account_id), None)
+        if not account:
+            await query.edit_message_text("❌ اکانت یافت نشد!")
+            return
+        
+        self.user_states[query.from_user.id] = {
+            'action': 'analysis',
+            'account_id': account_id,
+            'step': 'get_chat'
+        }
+        
+        keyboard = [[InlineKeyboardButton("⏹️ توقف آنالیز", callback_data=f"stop_analysis_{account_id}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        text = f"""🔍 **شروع آنالیز با اکانت:**
+{account['first_name'] or account['phone']}
+
+لطفا لینک یا آیدی گروه/کانال را ارسال کنید:
+(مثال: @channel_name یا https://t.me/channel_name)"""
+        
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+    
+    async def start_private_messaging(self, query, context, category_id):
+        """Start private messaging process"""
+        category = next((cat for cat in self.db.get_categories() if cat['id'] == category_id), None)
+        if not category:
+            await query.edit_message_text("❌ دسته‌بندی یافت نشد!")
+            return
+        
+        accounts = self.db.get_accounts(category_id)
+        if not accounts:
+            await query.edit_message_text("❌ هیچ اکانتی در این دسته یافت نشد!")
+            return
+        
+        self.user_states[query.from_user.id] = {
+            'action': 'private_messaging',
+            'category_id': category_id,
+            'step': 'get_members'
+        }
+        
+        keyboard = [[InlineKeyboardButton("⏹️ توقف ارسال", callback_data=f"stop_sending_{category_id}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        text = f"""📤 **ارسال با دسته:** {category['name']}
+💼 **تعداد اکانت:** {len(accounts)}
+
+مرحله 1: لیست ممبرها را ارسال کنید
+(هر آیدی عددی در خط جداگانه)"""
+        
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
     
     async def message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle text messages"""
         user_id = update.effective_user.id
         
         if not self.is_authorized(user_id):
-            await update.message.reply_text(Config.DEFAULT_TEMPLATES['unauthorized'])
             return
         
+        # Handle menu buttons
         text = update.message.text
         
-        # Handle menu buttons
         if text == "📱 مدیریت اکانت‌ها":
             await self.handle_account_management(update, context)
-        elif text == "📤 ارسال پیام":
-            await self.handle_message_sending(update, context)
-        elif text == "📊 آنالیز و آمار":
-            await self.handle_analytics(update, context)
-        elif text == "📋 قالب‌های پیام":
-            await self.handle_templates(update, context)
-        elif text == "🔍 جستجوی کاربران":
-            await self.handle_user_search(update, context)
-        else:
-            # Handle user states for multi-step operations
-            if user_id in self.user_states:
-                await self.handle_user_state(update, context)
-            else:
-                await update.message.reply_text("لطفا از منوی اصلی استفاده کنید.")
+        elif text == "📊 آنالیز پیشرفته":
+            await self.handle_advanced_analysis(update, context)
+        elif text == "📤 ارسال به پیوی":
+            await self.handle_private_messaging(update, context)
+        elif text == "🏷️ ایجاد دسته‌بندی":
+            await self.handle_category_creation(update, context)
+        elif text == "⚙️ تنظیمات":
+            await self.handle_settings(update, context)
+        elif text == "🌐 مدیریت پروکسی":
+            await self.handle_proxy_management(update, context)
+        
+        # Handle user states
+        elif user_id in self.user_states:
+            await self.handle_user_state(update, context)
     
     async def handle_user_state(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle user conversation states"""
@@ -251,93 +365,235 @@ class TelegramBot:
         text = update.message.text
         
         if state['action'] == 'add_account':
-            if state['step'] == 'phone':
-                state['phone'] = text
-                state['step'] = 'api_id'
-                await update.message.reply_text("✅ شماره تلفن دریافت شد.\n\n2️⃣ حالا API ID را ارسال کنید:")
+            await self.handle_add_account_state(update, context, state, text)
+        elif state['action'] == 'analysis':
+            await self.handle_analysis_state(update, context, state, text)
+        elif state['action'] == 'private_messaging':
+            await self.handle_messaging_state(update, context, state, text)
+        elif state['action'] == 'create_category':
+            await self.handle_category_state(update, context, state, text)
+        elif state['action'] == 'settings':
+            await self.handle_settings_state(update, context, state, text)
+    
+    async def handle_add_account_state(self, update, context, state, text):
+        """Handle add account conversation"""
+        if state['step'] == 'phone':
+            state['phone'] = text.strip()
+            state['step'] = 'api_id'
+            await update.message.reply_text("📱 API ID را وارد کنید:")
+        
+        elif state['step'] == 'api_id':
+            try:
+                state['api_id'] = int(text.strip())
+                state['step'] = 'api_hash'
+                await update.message.reply_text("🔑 API Hash را وارد کنید:")
+            except ValueError:
+                await update.message.reply_text("❌ API ID باید عدد باشد!")
+        
+        elif state['step'] == 'api_hash':
+            state['api_hash'] = text.strip()
             
-            elif state['step'] == 'api_id':
-                try:
-                    state['api_id'] = int(text)
-                    state['step'] = 'api_hash'
-                    await update.message.reply_text("✅ API ID دریافت شد.\n\n3️⃣ حالا API Hash را ارسال کنید:")
-                except ValueError:
-                    await update.message.reply_text("❌ API ID باید عدد باشد. دوباره تلاش کنید:")
-            
-            elif state['step'] == 'api_hash':
-                state['api_hash'] = text
-                await update.message.reply_text("⏳ در حال افزودن اکانت... لطفا صبر کنید.")
-                
-                # Add account
-                result = await self.sender.add_account(
-                    phone=state['phone'],
-                    api_id=state['api_id'],
-                    api_hash=state['api_hash']
+            # Add account to sender and database
+            try:
+                success = await self.sender.add_account(
+                    state['phone'], state['api_id'], state['api_hash']
                 )
                 
-                if result['success']:
-                    user_info = result['user_info']
-                    text = f"""
-✅ **اکانت با موفقیت اضافه شد!**
-
-👤 **اطلاعات کاربر:**
-• نام: {user_info['first_name']} {user_info['last_name'] or ''}
-• یوزرنیم: @{user_info['username'] or 'ندارد'}
-• شماره: {user_info['phone']}
-
-اکانت آماده استفاده است.
-                    """
+                if success:
+                    # Auto-assign proxy if available
+                    proxy = self.db.get_available_proxy()
+                    proxy_id = proxy['id'] if proxy else None
+                    
+                    account_id = self.db.add_account(
+                        state['phone'], 
+                        state['phone'].replace('+', ''),
+                        state['api_id'], 
+                        state['api_hash']
+                    )
+                    
+                    if proxy_id:
+                        self.db.assign_proxy_to_account(account_id, proxy_id)
+                    
+                    await update.message.reply_text(Config.MESSAGES['account_added'])
                 else:
-                    text = f"❌ خطا در افزودن اکانت: {result['error']}"
+                    await update.message.reply_text(Config.MESSAGES['account_error'].format("خطا در اتصال"))
+                    
+            except Exception as e:
+                await update.message.reply_text(Config.MESSAGES['account_error'].format(str(e)))
+            
+            # Clear state
+            del self.user_states[update.effective_user.id]
+    
+    async def handle_analysis_state(self, update, context, state, text):
+        """Handle analysis conversation"""
+        if state['step'] == 'get_chat':
+            try:
+                # Start analysis task
+                account_id = state['account_id']
+                chat_identifier = text.strip()
                 
-                await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
-                del self.user_states[user_id]
+                # Create analysis task
+                task = asyncio.create_task(
+                    self.sender.extract_members(account_id, chat_identifier)
+                )
+                self.analysis_tasks[account_id] = task
+                
+                await update.message.reply_text(Config.MESSAGES['analysis_started'])
+                
+                # Wait for completion
+                members = await task
+                
+                if members:
+                    # Save members to database
+                    self.db.save_members(members, account_id)
+                    
+                    # Send member list
+                    member_text = "👥 **لیست ممبرها:**\n\n"
+                    for i, member in enumerate(members[:50], 1):  # Show first 50
+                        member_text += f"{i}. {member.get('id', 'N/A')}\n"
+                    
+                    if len(members) > 50:
+                        member_text += f"\n... و {len(members) - 50} ممبر دیگر"
+                    
+                    await update.message.reply_text(
+                        Config.MESSAGES['analysis_completed'].format(len(members))
+                    )
+                    await update.message.reply_text(member_text, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await update.message.reply_text("❌ هیچ ممبری یافت نشد!")
+                
+                # Clean up
+                if account_id in self.analysis_tasks:
+                    del self.analysis_tasks[account_id]
+                del self.user_states[update.effective_user.id]
+                
+            except Exception as e:
+                await update.message.reply_text(f"❌ خطا در آنالیز: {str(e)}")
+                del self.user_states[update.effective_user.id]
     
-    async def handle_templates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle message templates"""
-        templates = self.db.get_templates()
+    async def handle_messaging_state(self, update, context, state, text):
+        """Handle private messaging conversation"""
+        if state['step'] == 'get_members':
+            try:
+                # Parse member IDs
+                member_ids = []
+                for line in text.strip().split('\n'):
+                    line = line.strip()
+                    if line.isdigit():
+                        member_ids.append(int(line))
+                
+                if not member_ids:
+                    await update.message.reply_text("❌ هیچ آیدی معتبری یافت نشد!")
+                    return
+                
+                state['member_ids'] = member_ids
+                state['step'] = 'get_message'
+                
+                await update.message.reply_text(
+                    f"✅ {len(member_ids)} ممبر پردازش شد!\n\n"
+                    "مرحله 2: پیام یا بنر خود را ارسال کنید:\n"
+                    "(متن، عکس، ویدیو و ... پشتیبانی می‌شود)"
+                )
+                
+            except Exception as e:
+                await update.message.reply_text(f"❌ خطا در پردازش لیست: {str(e)}")
         
-        if not templates:
-            text = "📋 **قالب‌های پیام**\n\nهیچ قالبی یافت نشد."
+        elif state['step'] == 'get_message':
+            try:
+                # Start sending task
+                category_id = state['category_id']
+                member_ids = state['member_ids']
+                
+                # Handle media or text
+                media_path = None
+                message_text = text
+                
+                if update.message.photo:
+                    # Handle photo
+                    photo = update.message.photo[-1]
+                    file = await context.bot.get_file(photo.file_id)
+                    media_path = os.path.join(Config.MEDIA_DIR, f"{photo.file_id}.jpg")
+                    await file.download_to_drive(media_path)
+                    message_text = update.message.caption or ""
+                
+                elif update.message.video:
+                    # Handle video
+                    video = update.message.video
+                    file = await context.bot.get_file(video.file_id)
+                    media_path = os.path.join(Config.MEDIA_DIR, f"{video.file_id}.mp4")
+                    await file.download_to_drive(media_path)
+                    message_text = update.message.caption or ""
+                
+                # Create sending task
+                task = asyncio.create_task(
+                    self.sender.send_bulk_messages(category_id, member_ids, message_text, media_path)
+                )
+                self.sending_tasks[category_id] = task
+                
+                await update.message.reply_text(Config.MESSAGES['sending_started'])
+                
+                # Wait for completion
+                results = await task
+                
+                success_count = sum(1 for r in results if r['status'] == 'success')
+                total_count = len(results)
+                
+                await update.message.reply_text(
+                    f"✅ ارسال کامل شد!\n"
+                    f"موفق: {success_count}/{total_count}"
+                )
+                
+                # Clean up
+                if category_id in self.sending_tasks:
+                    del self.sending_tasks[category_id]
+                del self.user_states[update.effective_user.id]
+                
+            except Exception as e:
+                await update.message.reply_text(f"❌ خطا در ارسال: {str(e)}")
+                del self.user_states[update.effective_user.id]
+    
+    async def stop_analysis(self, query, account_id):
+        """Stop analysis task"""
+        if account_id in self.analysis_tasks:
+            self.analysis_tasks[account_id].cancel()
+            del self.analysis_tasks[account_id]
+            await query.edit_message_text(Config.MESSAGES['analysis_stopped'])
         else:
-            text = "📋 **قالب‌های پیام**\n\n"
-            for template in templates:
-                text += f"• **{template['name']}**\n"
-                text += f"  {template['content'][:50]}...\n\n"
-        
-        keyboard = [
-            [InlineKeyboardButton("➕ افزودن قالب جدید", callback_data="add_template")],
-            [InlineKeyboardButton("🏠 بازگشت به منو اصلی", callback_data="main_menu")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode=ParseMode.MARKDOWN)
+            await query.edit_message_text("❌ هیچ آنالیز فعالی یافت نشد!")
     
-    async def handle_user_search(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle user search"""
-        text = """
-🔍 **جستجوی کاربران**
-
-برای جستجوی کاربران، ابتدا اکانت مورد نظر و سپس کلمه کلیدی جستجو را ارسال کنید.
-
-این ویژگی به زودی فعال خواهد شد...
-        """
-        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    async def stop_sending(self, query, category_id):
+        """Stop sending task"""
+        if category_id in self.sending_tasks:
+            self.sending_tasks[category_id].cancel()
+            del self.sending_tasks[category_id]
+            await query.edit_message_text(Config.MESSAGES['sending_stopped'])
+        else:
+            await query.edit_message_text("❌ هیچ ارسال فعالی یافت نشد!")
     
-    def run(self):
-        """Run the bot"""
-        # Create application
-        application = Application.builder().token(Config.BOT_TOKEN).build()
+    async def start_create_category(self, query, context):
+        """Start creating new category"""
+        self.user_states[query.from_user.id] = {
+            'action': 'create_category',
+            'step': 'name'
+        }
         
-        # Add handlers
+        await query.edit_message_text(
+            "🏷️ **ایجاد دسته‌بندی جدید**\n\nنام دسته‌بندی را وارد کنید:"
+        )
+    
+    async def handle_category_state(self, update, context, state, text):
+        """Handle category creation conversation"""
+        if state['step'] == 'name':
+            try:
+                category_id = self.db.create_category(text.strip())
+                await update.message.reply_text(Config.MESSAGES['category_created'])
+                del self.user_states[update.effective_user.id]
+            except Exception as e:
+                await update.message.reply_text(f"❌ خطا در ایجاد دسته: {str(e)}")
+    
+    def setup_handlers(self, application):
+        """Setup bot handlers"""
         application.add_handler(CommandHandler("start", self.start))
         application.add_handler(CallbackQueryHandler(self.callback_handler))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.message_handler))
-        
-        # Start the bot
-        print("🚀 ربات در حال اجرا...")
-        application.run_polling()
-
-if __name__ == "__main__":
-    bot = TelegramBot()
-    bot.run()
+        application.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, self.message_handler))
