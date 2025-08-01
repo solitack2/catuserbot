@@ -5,11 +5,16 @@
 Advanced Telegram Private Message Sender Bot
 ============================================
 
-A comprehensive Telegram bot for managing multiple accounts and sending private messages
-with advanced analytics, flood control, and user management features.
+ربات پیشرفته ارسال پیام خصوصی تلگرام با قابلیت‌های:
+• مدیریت چندین اکانت تلگرام
+• آنالیز پیشرفته ممبرها
+• ارسال پیام خصوصی با پشتیبانی رسانه
+• دسته‌بندی اکانت‌ها
+• مدیریت پروکسی
+• تنظیمات پیشرفته
 
 Author: AI Assistant
-Version: 1.0.0
+Version: 2.0.0
 """
 
 import asyncio
@@ -26,11 +31,12 @@ sys.path.append(str(Path(__file__).parent))
 from bot import TelegramBot
 from sender import TelegramSender
 from config import Config
-from analytics import AdvancedAnalytics
+from database import DatabaseManager
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from telegram.ext import Application
 
 console = Console()
 
@@ -38,265 +44,284 @@ class TelegramSenderApp:
     def __init__(self):
         self.bot = None
         self.sender = None
-        self.analytics = None
+        self.db = None
+        self.application = None
         self.running = False
         
     def setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""
         def signal_handler(signum, frame):
-            console.print("\n[yellow]🛑 Shutting down gracefully...[/yellow]")
+            console.print("\n[yellow]🛑 در حال خروج از برنامه...[/yellow]")
             self.running = False
             if self.sender:
-                asyncio.create_task(self.sender.close_all())
+                asyncio.create_task(self.sender.cleanup_clients())
+                asyncio.create_task(self.sender.stop_all_tasks())
             sys.exit(0)
         
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
     
-    def display_banner(self):
-        """Display application banner"""
+    def show_banner(self):
+        """Show application banner"""
         banner_text = """
-╔══════════════════════════════════════════════╗
-║     🚀 Advanced Telegram Sender Bot 🚀      ║
-║                                              ║
-║  📱 Multi-Account Management                 ║
-║  📤 Private Message Sending                 ║
-║  📊 Advanced Analytics                       ║
-║  🔄 Bulk Messaging with Flood Control       ║
-║  📋 Message Templates                        ║
-║  🔍 User Search & Discovery                  ║
-╚══════════════════════════════════════════════╝
+🤖 ربات پیشرفته ارسال پیام تلگرام
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 مدیریت اکانت‌ها
+📊 آنالیز پیشرفته ممبرها  
+📤 ارسال پیام خصوصی
+🏷️ دسته‌بندی اکانت‌ها
+🌐 مدیریت پروکسی
+⚙️ تنظیمات پیشرفته
+
+ورژن: 2.0.0
         """
         
-        console.print(Panel(
+        panel = Panel(
             banner_text,
-            title="[bold blue]Telegram Sender Bot[/bold blue]",
-            border_style="blue"
-        ))
+            title="[bold blue]🚀 Telegram Sender Bot[/bold blue]",
+            border_style="blue",
+            padding=(1, 2)
+        )
+        console.print(panel)
     
-    def check_configuration(self):
-        """Check if all required configurations are set"""
-        missing_configs = []
-        
-        if not Config.BOT_TOKEN:
-            missing_configs.append("BOT_TOKEN")
-        if not Config.OWNER_ID:
-            missing_configs.append("OWNER_ID")
-        
-        if missing_configs:
-            console.print("[red]❌ Missing required configuration:[/red]")
-            for config in missing_configs:
-                console.print(f"   • {config}")
-            console.print("\n[yellow]Please set these in your .env file[/yellow]")
-            return False
-        
-        return True
+    def show_status(self):
+        """Show current system status"""
+        try:
+            # Get statistics
+            accounts = self.db.get_accounts()
+            categories = self.db.get_categories()
+            proxies = self.db.get_proxies()
+            
+            # Create status table
+            table = Table(title="📊 وضعیت سیستم", show_header=True, header_style="bold magenta")
+            table.add_column("بخش", style="cyan", width=15)
+            table.add_column("تعداد", style="green", width=10)
+            table.add_column("وضعیت", style="yellow", width=20)
+            
+            # Account statistics
+            active_accounts = len([acc for acc in accounts if acc['status'] == 'active'])
+            table.add_row("🔐 اکانت‌ها", str(len(accounts)), f"{active_accounts} فعال از {len(accounts)}")
+            
+            # Category statistics
+            table.add_row("🏷️ دسته‌بندی", str(len(categories)), "آماده استفاده")
+            
+            # Proxy statistics
+            active_proxies = len([p for p in proxies if p['is_active']])
+            table.add_row("🌐 پروکسی", str(len(proxies)), f"{active_proxies} فعال از {len(proxies)}")
+            
+            # Settings status
+            settings = self.db.get_all_settings()
+            send_limit = settings.get('send_limit', Config.DEFAULT_SEND_LIMIT)
+            table.add_row("⚙️ تنظیمات", "✅", f"حد ارسال: {send_limit}")
+            
+            console.print(table)
+            
+        except Exception as e:
+            console.print(f"[red]❌ خطا در نمایش وضعیت: {str(e)}[/red]")
     
-    def display_config_info(self):
-        """Display current configuration"""
-        table = Table(title="📋 Current Configuration")
-        table.add_column("Setting", style="cyan")
-        table.add_column("Value", style="green")
+    def check_config(self):
+        """Check configuration and setup"""
+        config_ok = True
         
-        table.add_row("Bot Token", f"{'✅ Set' if Config.BOT_TOKEN else '❌ Not Set'}")
-        table.add_row("Owner ID", str(Config.OWNER_ID) if Config.OWNER_ID else "❌ Not Set")
-        table.add_row("Max Messages/Min", str(Config.MAX_MESSAGES_PER_MINUTE))
-        table.add_row("Message Delay", f"{Config.DELAY_BETWEEN_MESSAGES}s")
-        table.add_row("Analytics", "✅ Enabled" if Config.ENABLE_ANALYTICS else "❌ Disabled")
-        table.add_row("Flood Control", "✅ Enabled" if Config.ENABLE_FLOOD_CONTROL else "❌ Disabled")
+        # Check bot token
+        if Config.BOT_TOKEN == "YOUR_BOT_TOKEN":
+            console.print("[red]❌ BOT_TOKEN تنظیم نشده است![/red]")
+            console.print("[yellow]💡 BOT_TOKEN را در فایل .env یا config.py تنظیم کنید[/yellow]")
+            config_ok = False
         
-        console.print(table)
+        # Check owner ID
+        if Config.OWNER_ID == 123456789:
+            console.print("[red]❌ OWNER_ID تنظیم نشده است![/red]")
+            console.print("[yellow]💡 OWNER_ID را در فایل .env یا config.py تنظیم کنید[/yellow]")
+            config_ok = False
+        
+        # Check directories
+        for directory in [Config.SESSIONS_DIR, Config.MEDIA_DIR, Config.LOGS_DIR]:
+            if not os.path.exists(directory):
+                os.makedirs(directory, exist_ok=True)
+                console.print(f"[green]✅ پوشه {directory} ایجاد شد[/green]")
+        
+        return config_ok
+    
+    def setup_logging(self):
+        """Setup application logging"""
+        log_file = os.path.join(Config.LOGS_DIR, 'main.log')
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file, encoding='utf-8'),
+                logging.StreamHandler()
+            ]
+        )
+        
+        # Reduce pyrogram logging
+        logging.getLogger('pyrogram').setLevel(logging.WARNING)
+        
+        console.print(f"[green]✅ لاگ‌ها در {log_file} ذخیره می‌شوند[/green]")
     
     async def initialize_components(self):
-        """Initialize all application components"""
+        """Initialize all components"""
         try:
-            console.print("[yellow]🔄 Initializing components...[/yellow]")
+            console.print("[blue]🔧 در حال راه‌اندازی اجزای سیستم...[/blue]")
+            
+            # Initialize database
+            self.db = DatabaseManager()
+            console.print("[green]✅ پایگاه داده آماده شد[/green]")
             
             # Initialize sender
             self.sender = TelegramSender()
-            console.print("[green]✅ Sender initialized[/green]")
-            
-            # Initialize analytics
-            if Config.ENABLE_ANALYTICS:
-                self.analytics = AdvancedAnalytics()
-                console.print("[green]✅ Analytics initialized[/green]")
-            
-            # Load existing accounts
-            await self.sender.load_accounts()
-            accounts = self.sender.get_accounts_list()
-            console.print(f"[green]✅ Loaded {len(accounts)} accounts[/green]")
+            console.print("[green]✅ سیستم ارسال آماده شد[/green]")
             
             # Initialize bot
             self.bot = TelegramBot()
-            console.print("[green]✅ Bot initialized[/green]")
+            console.print("[green]✅ ربات تلگرام آماده شد[/green]")
+            
+            # Setup telegram application
+            self.application = Application.builder().token(Config.BOT_TOKEN).build()
+            self.bot.setup_handlers(self.application)
+            console.print("[green]✅ هندلرهای ربات تنظیم شدند[/green]")
             
             return True
             
         except Exception as e:
-            console.print(f"[red]❌ Error initializing components: {str(e)}[/red]")
+            console.print(f"[red]❌ خطا در راه‌اندازی: {str(e)}[/red]")
             return False
     
-    def display_accounts_summary(self):
-        """Display summary of loaded accounts"""
-        if not self.sender:
-            return
-        
-        accounts = self.sender.get_accounts_list()
-        
-        if not accounts:
-            console.print("[yellow]📱 No accounts found. Add accounts using the bot.[/yellow]")
-            return
-        
-        table = Table(title="📱 Loaded Accounts")
-        table.add_column("Phone", style="cyan")
-        table.add_column("Name", style="green")
-        table.add_column("Username", style="blue")
-        table.add_column("Status", style="yellow")
-        table.add_column("Total Sent", style="magenta")
-        
-        for account in accounts:
-            status = "🟢 Active" if account['is_active'] else "🔴 Inactive"
-            name = f"{account['first_name'] or ''} {account['last_name'] or ''}".strip()
-            username = f"@{account['username']}" if account['username'] else "None"
-            
-            table.add_row(
-                account['phone'],
-                name or "Unknown",
-                username,
-                status,
-                str(account['total_sent'])
-            )
-        
-        console.print(table)
-    
-    def display_analytics_summary(self):
-        """Display analytics summary"""
-        if not self.analytics:
-            return
-        
+    async def start_bot(self):
+        """Start the telegram bot"""
         try:
-            report = self.analytics.get_performance_report(7)
-            console.print(Panel(
-                report,
-                title="[bold green]📊 Performance Summary[/bold green]",
-                border_style="green"
-            ))
+            console.print("[blue]🚀 در حال شروع ربات تلگرام...[/blue]")
             
-            recommendations = self.analytics.get_recommendations()
-            if recommendations:
-                rec_text = "\n".join(recommendations)
-                console.print(Panel(
-                    rec_text,
-                    title="[bold yellow]💡 Recommendations[/bold yellow]",
-                    border_style="yellow"
-                ))
+            # Start the application
+            await self.application.initialize()
+            await self.application.start()
+            await self.application.updater.start_polling()
+            
+            self.running = True
+            console.print("[green]✅ ربات با موفقیت شروع شد![/green]")
+            console.print(f"[yellow]📱 ربات در حال اجرا است. برای خروج Ctrl+C بزنید[/yellow]")
+            
+            # Keep running
+            while self.running:
+                await asyncio.sleep(1)
+                
         except Exception as e:
-            console.print(f"[red]❌ Error displaying analytics: {str(e)}[/red]")
+            console.print(f"[red]❌ خطا در اجرای ربات: {str(e)}[/red]")
+            raise
     
-    def display_usage_instructions(self):
-        """Display usage instructions"""
-        instructions = """
-🔧 **Getting Started:**
+    async def shutdown(self):
+        """Graceful shutdown"""
+        try:
+            console.print("[yellow]🛑 در حال خاموش کردن سیستم...[/yellow]")
+            
+            if self.sender:
+                await self.sender.cleanup_clients()
+                await self.sender.stop_all_tasks()
+                console.print("[green]✅ اتصالات اکانت‌ها بسته شدند[/green]")
+            
+            if self.application:
+                await self.application.updater.stop()
+                await self.application.stop()
+                await self.application.shutdown()
+                console.print("[green]✅ ربات تلگرام خاموش شد[/green]")
+            
+            console.print("[green]✅ سیستم با موفقیت خاموش شد[/green]")
+            
+        except Exception as e:
+            console.print(f"[red]❌ خطا در خاموش کردن: {str(e)}[/red]")
+    
+    def show_help(self):
+        """Show help information"""
+        help_text = """
+📖 راهنمای استفاده:
 
-1. Make sure you have set BOT_TOKEN and OWNER_ID in your .env file
-2. Start the bot and send /start command
-3. Add your Telegram accounts using the bot interface
-4. Start sending private messages!
+1️⃣ **راه‌اندازی اولیه:**
+   • BOT_TOKEN را از @BotFather دریافت و تنظیم کنید
+   • OWNER_ID را (آیدی عددی تلگرام شما) تنظیم کنید
+   • فایل .env ایجاد کنید یا config.py را ویرایش کنید
 
-🎯 **Bot Commands:**
-• /start - Show main menu
-• Use inline keyboards for navigation
+2️⃣ **افزودن اکانت:**
+   • از منوی "مدیریت اکانت‌ها" استفاده کنید
+   • API ID و API Hash از my.telegram.org دریافت کنید
+   • اکانت‌ها به صورت خودکار به پروکسی تخصیص می‌یابند
 
-📱 **Adding Accounts:**
-• Get API credentials from https://my.telegram.org
-• Use bot interface to add accounts step by step
+3️⃣ **آنالیز ممبرها:**
+   • از منوی "آنالیز پیشرفته" استفاده کنید
+   • اکانت مورد نظر را انتخاب کنید
+   • لینک گروه/کانال را ارسال کنید
 
-📤 **Sending Messages:**
-• Single messages to specific users
-• Bulk messaging with flood protection
-• Use message templates for efficiency
+4️⃣ **ارسال پیام:**
+   • ابتدا دسته‌بندی ایجاد کنید
+   • اکانت‌ها را به دسته تخصیص دهید
+   • از منوی "ارسال به پیوی" استفاده کنید
 
-📊 **Analytics:**
-• View real-time statistics
-• Generate performance charts
-• Get improvement recommendations
+5️⃣ **تنظیمات:**
+   • حد ارسال، زمان استراحت و پروکسی را تنظیم کنید
+   • توزیع هش روی اکانت‌ها را مدیریت کنید
+
+📞 **پشتیبانی:**
+   • لاگ‌ها در پوشه logs ذخیره می‌شوند
+   • در صورت مشکل، لاگ‌ها را بررسی کنید
         """
         
-        console.print(Panel(
-            instructions,
-            title="[bold blue]📖 Usage Instructions[/bold blue]",
-            border_style="blue"
-        ))
+        panel = Panel(
+            help_text,
+            title="[bold cyan]📖 راهنمای استفاده[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2)
+        )
+        console.print(panel)
     
     async def run(self):
-        """Main application entry point"""
-        self.setup_signal_handlers()
-        self.display_banner()
-        
-        # Check configuration
-        if not self.check_configuration():
-            return
-        
-        self.display_config_info()
-        
-        # Initialize components
-        if not await self.initialize_components():
-            return
-        
-        # Display summaries
-        self.display_accounts_summary()
-        
-        if Config.ENABLE_ANALYTICS:
-            self.display_analytics_summary()
-        
-        self.display_usage_instructions()
-        
-        # Start the bot
-        console.print("\n[bold green]🚀 Starting Telegram Bot...[/bold green]")
-        console.print("[yellow]Press Ctrl+C to stop[/yellow]\n")
-        
+        """Main run method"""
         try:
-            self.running = True
-            self.bot.run()
+            # Show banner
+            self.show_banner()
+            
+            # Setup signal handlers
+            self.setup_signal_handlers()
+            
+            # Setup logging
+            self.setup_logging()
+            
+            # Check configuration
+            if not self.check_config():
+                console.print("\n[red]❌ پیکربندی کامل نیست. لطفا تنظیمات را بررسی کنید.[/red]")
+                self.show_help()
+                return
+            
+            # Initialize components
+            if not await self.initialize_components():
+                console.print("\n[red]❌ خطا در راه‌اندازی اجزای سیستم[/red]")
+                return
+            
+            # Show status
+            self.show_status()
+            
+            # Start bot
+            await self.start_bot()
+            
         except KeyboardInterrupt:
-            console.print("\n[yellow]👋 Goodbye![/yellow]")
+            console.print("\n[yellow]⏹️ درخواست توقف دریافت شد[/yellow]")
         except Exception as e:
-            console.print(f"\n[red]❌ Error running bot: {str(e)}[/red]")
+            console.print(f"\n[red]❌ خطای غیرمنتظره: {str(e)}[/red]")
         finally:
-            if self.sender:
-                await self.sender.close_all()
+            await self.shutdown()
 
-def main():
-    """Main function"""
-    # Create necessary directories
-    os.makedirs("sessions", exist_ok=True)
-    os.makedirs("logs", exist_ok=True)
-    
-    # Create .env file if it doesn't exist
-    if not os.path.exists(".env"):
-        with open(".env", "w") as f:
-            f.write("""# Copy this file to .env and fill in your values
-BOT_TOKEN=your_bot_token_here
-OWNER_ID=your_telegram_user_id
-
-# Optional settings
-API_ID=your_api_id
-API_HASH=your_api_hash
-LOG_LEVEL=INFO
-""")
-        console.print("[yellow]📝 Created .env file. Please fill in your configuration.[/yellow]")
-        return
-    
-    # Run the application
+async def main():
+    """Main entry point"""
     app = TelegramSenderApp()
-    
-    try:
-        asyncio.run(app.run())
-    except KeyboardInterrupt:
-        console.print("\n[yellow]👋 Application stopped by user[/yellow]")
-    except Exception as e:
-        console.print(f"\n[red]❌ Fatal error: {str(e)}[/red]")
-        logging.exception("Fatal error occurred")
+    await app.run()
 
 if __name__ == "__main__":
-    main()
+    try:
+        # Run the application
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]👋 خداحافظ![/yellow]")
+    except Exception as e:
+        console.print(f"\n[red]❌ خطای نهایی: {str(e)}[/red]")
+        sys.exit(1)
