@@ -1,205 +1,199 @@
-# 🤖 ربات پیشرفته ارسال پیام تلگرام
-# Advanced Telegram Private Message Sender Bot
+# ربات ارسال کننده تلگرام / Telegram Sender Bot
 
-## 🌟 ویژگی‌ها | Features
+یک ربات قدرتمند PHP برای مدیریت اکانت‌ها و ارسال پیام‌های انبوه در تلگرام
 
-### فارسی
-- 📱 **مدیریت چندین اکانت**: افزودن و مدیریت اکانت‌های متعدد تلگرام
-- 📊 **آنالیز پیشرفته**: استخراج لیست ممبرهای گروه‌ها و کانال‌ها
-- 📤 **ارسال پیام خصوصی**: ارسال پیام متنی و رسانه به پیوی کاربران
-- 🏷️ **دسته‌بندی اکانت‌ها**: سازماندهی اکانت‌ها در دسته‌های مختلف
-- 🌐 **پشتیبانی پروکسی**: استفاده از پروکسی برای اکانت‌ها
-- ⚙️ **تنظیمات پیشرفته**: کنترل سرعت ارسال و زمان استراحت
-- 🔢 **توزیع هش**: توزیع عددی روی اکانت‌ها
-- 📈 **آمار و گزارش**: نمایش آمار کامل ارسال‌ها
+A powerful PHP bot for managing accounts and sending bulk messages on Telegram
 
-### English
-- 📱 **Multi-Account Management**: Add and manage multiple Telegram accounts
-- 📊 **Advanced Analysis**: Extract member lists from groups and channels
-- 📤 **Private Messaging**: Send text and media messages to users' DMs
-- 🏷️ **Account Categories**: Organize accounts into different categories
-- 🌐 **Proxy Support**: Use proxies for accounts
-- ⚙️ **Advanced Settings**: Control sending speed and rest intervals
-- 🔢 **Hash Distribution**: Distribute numbers across accounts
-- 📈 **Statistics & Reports**: Complete sending statistics
+## 🚀 قابلیت‌های اصلی / Main Features
 
-## 🚀 نصب و راه‌اندازی | Installation & Setup
+### ✅ مدیریت اکانت‌ها / Account Management
+- افزودن اکانت‌های جدید / Add new accounts
+- بررسی وضعیت اکانت‌ها (سالم، محدود، بن، آفلاین) / Check account status (healthy, limited, banned, offline)
+- نمایش آمار کامل اکانت‌ها / Display complete account statistics
 
-### پیش‌نیازها | Prerequisites
-```bash
-Python 3.8+
-pip
+### 🔍 انالیز پیشرفته گروه‌ها / Advanced Group Analysis
+- استخراج لیست ممبرهای گروه از طریق تحلیل پیام‌ها / Extract group member lists through message analysis
+- ذخیره اطلاعات ممبرها با جزئیات کامل / Save member information with complete details
+- تاریخ‌گذاری و ردیابی انالیزها / Date stamping and analysis tracking
+
+### 📨 ارسال پیام خصوصی / Private Messaging
+- ارسال پیام‌های انبوه به ممبرهای استخراج شده / Send bulk messages to extracted members
+- گزارش دقیق از وضعیت ارسال‌ها / Detailed delivery status reports
+- کنترل سرعت ارسال برای جلوگیری از محدودیت / Rate limiting to avoid restrictions
+
+## 📁 ساختار فایل‌ها / File Structure
+
+```
+telegram-sender-bot/
+├── telegram_sender_bot.php    # فایل اصلی ربات / Main bot file
+├── config.php                 # فایل تنظیمات / Configuration file
+├── accounts.json              # ذخیره اکانت‌ها / Accounts storage
+├── members.json               # ذخیره ممبرها / Members storage
+├── bot_logs.txt              # لاگ‌های ربات / Bot logs
+└── README.md                 # راهنمای استفاده / Usage guide
 ```
 
-### 1. کلون کردن پروژه | Clone Repository
-```bash
-git clone <repository-url>
-cd telegram_sender_bot
-```
+## ⚙️ راه‌اندازی / Setup
 
-### 2. نصب کتابخانه‌ها | Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+### 1. ایجاد ربات در تلگرام / Create Telegram Bot
 
-### 3. تنظیمات | Configuration
-```bash
-# کپی کردن فایل نمونه
-cp .env.example .env
-
-# ویرایش فایل .env
-nano .env
-```
-
-### 4. دریافت BOT_TOKEN
-1. به [@BotFather](https://t.me/BotFather) پیام دهید
+1. به [@BotFather](https://t.me/BotFather) در تلگرام پیام دهید
 2. دستور `/newbot` را ارسال کنید
-3. نام و یوزرنیم ربات را تنظیم کنید
-4. TOKEN دریافتی را در فایل `.env` قرار دهید
+3. نام و یوزرنیم ربات را انتخاب کنید
+4. توکن ربات را کپی کنید
 
-### 5. دریافت OWNER_ID
+Send message to [@BotFather](https://t.me/BotFather) on Telegram:
+1. Send `/newbot` command
+2. Choose bot name and username
+3. Copy the bot token
+
+### 2. دریافت شناسه کاربری / Get User ID
+
 1. به [@userinfobot](https://t.me/userinfobot) پیام دهید
-2. آیدی عددی خود را کپی کنید
-3. در فایل `.env` قرار دهید
+2. شناسه عددی خود را کپی کنید
 
-## 🎯 راه‌اندازی | Usage
+Send message to [@userinfobot](https://t.me/userinfobot) and copy your numeric user ID
 
-### اجرای ربات | Run Bot
-```bash
-python main.py
+### 3. تنظیم فایل‌ها / Configure Files
+
+فایل `config.php` را ویرایش کنید / Edit `config.php` file:
+
+```php
+define('BOT_TOKEN', 'YOUR_ACTUAL_BOT_TOKEN');
+define('ADMIN_ID', YOUR_ACTUAL_USER_ID);
 ```
 
-### اجرای با Docker | Run with Docker
-```bash
-docker-compose up -d
-```
+### 4. آپلود به سرور / Upload to Server
 
-## 📋 راهنمای استفاده | User Guide
+فایل‌ها را در پوشه‌ای روی سرور وب خود قرار دهید که از طریق HTTPS قابل دسترسی باشد
 
-### 1. افزودن اکانت | Add Account
-- از [@BotFather](https://t.me/BotFather) BOT_TOKEN دریافت کنید
-- از [my.telegram.org](https://my.telegram.org) API_ID و API_HASH دریافت کنید
-- در ربات از منوی "📱 مدیریت اکانت‌ها" استفاده کنید
+Upload files to a web server directory accessible via HTTPS
 
-### 2. ایجاد دسته‌بندی | Create Categories
-- از منوی "🏷️ ایجاد دسته‌بندی" استفاده کنید
-- اکانت‌ها را به دسته‌های مختلف تخصیص دهید
+### 5. تنظیم Webhook
 
-### 3. آنالیز ممبرها | Analyze Members
-- از منوی "📊 آنالیز پیشرفته" استفاده کنید
-- اکانت مورد نظر را انتخاب کنید
-- لینک گروه یا کانال را ارسال کنید
+آدرس زیر را در مرورگر باز کنید (با جایگزینی مقادیر مناسب):
 
-### 4. ارسال پیام | Send Messages
-- از منوی "📤 ارسال به پیوی" استفاده کنید
-- دسته‌بندی مورد نظر را انتخاب کنید
-- لیست آیدی ممبرها را ارسال کنید
-- پیام یا رسانه خود را ارسال کنید
-
-### 5. تنظیمات | Settings
-- تعداد ارسال در هر جلسه
-- زمان استراحت بین ارسال‌ها
-- تنظیمات پروکسی
-- توزیع هش روی اکانت‌ها
-
-## 🌐 مدیریت پروکسی | Proxy Management
-
-### افزودن پروکسی | Add Proxy
-```
-Type: socks5/http
-Host: proxy.example.com
-Port: 1080
-Username: (optional)
-Password: (optional)
-```
-
-### تخصیص خودکار | Auto Assignment
-ربات به صورت خودکار اکانت‌ها را به پروکسی‌های موجود تخصیص می‌دهد.
-
-## 📊 آمار و گزارش | Statistics & Reports
-
-- 📈 آمار روزانه ارسال
-- 👥 وضعیت اکانت‌ها
-- 🎯 نرخ موفقیت
-- 📱 آمار هر اکانت
-- 🏷️ آمار دسته‌بندی‌ها
-
-## 🔧 تنظیمات پیشرفته | Advanced Configuration
-
-### فایل config.py
-```python
-DEFAULT_SEND_LIMIT = 20  # پیام در هر جلسه
-DEFAULT_DELAY_MIN = 30   # حداقل تاخیر (ثانیه)
-DEFAULT_DELAY_MAX = 60   # حداکثر تاخیر (ثانیه)
-DEFAULT_ACCOUNT_REST = 300  # استراحت اکانت (ثانیه)
-```
-
-### متغیرهای محیطی | Environment Variables
-```bash
-BOT_TOKEN=your_bot_token
-OWNER_ID=your_user_id
-DEFAULT_SEND_LIMIT=20
-DEFAULT_DELAY_MIN=30
-DEFAULT_DELAY_MAX=60
-```
-
-## 🚨 نکات مهم | Important Notes
-
-### امنیت | Security
-- هرگز TOKEN ربات را با دیگران به اشتراک نگذارید
-- از پروکسی معتبر استفاده کنید
-- فایل‌های session را محافظت کنید
-
-### محدودیت‌ها | Limitations
-- رعایت قوانین تلگرام الزامی است
-- از flood wait جلوگیری کنید
-- تعداد ارسال روزانه را محدود کنید
-
-### خطاها | Troubleshooting
-- لاگ‌ها در پوشه `logs` ذخیره می‌شوند
-- در صورت خطا، لاگ‌ها را بررسی کنید
-- برای مشکلات proxy، اتصال را بررسی کنید
-
-## 📁 ساختار پروژه | Project Structure
+Open this URL in browser (replace with your values):
 
 ```
-telegram_sender_bot/
-├── main.py              # فایل اصلی
-├── bot.py               # منطق ربات
-├── sender.py            # سیستم ارسال
-├── database.py          # مدیریت دیتابیس
-├── config.py            # تنظیمات
-├── requirements.txt     # کتابخانه‌ها
-├── .env.example         # نمونه تنظیمات
-├── sessions/            # فایل‌های session
-├── media/               # فایل‌های رسانه
-└── logs/                # لاگ‌ها
+https://api.telegram.org/botYOUR_BOT_TOKEN/setWebhook?url=https://YOUR_DOMAIN/telegram_sender_bot.php
 ```
 
-## 🤝 مشارکت | Contributing
+### 6. بررسی سیستم / System Requirements
 
-1. پروژه را Fork کنید
-2. برنچ جدید بسازید (`git checkout -b feature/AmazingFeature`)
-3. تغییرات را Commit کنید (`git commit -m 'Add some AmazingFeature'`)
-4. به برنچ Push کنید (`git push origin feature/AmazingFeature`)
-5. Pull Request باز کنید
+مطمئن شوید سرور شما دارای موارد زیر است:
 
-## 📄 مجوز | License
+Ensure your server has:
 
-این پروژه تحت مجوز MIT منتشر شده است. فایل [LICENSE](LICENSE) را برای جزئیات بیشتر مطالعه کنید.
+- PHP 7.0 یا بالاتر / PHP 7.0+
+- پسوند JSON فعال / JSON extension enabled
+- دسترسی به `file_get_contents()` با HTTPS / HTTPS support for `file_get_contents()`
+- مجوز نوشتن فایل / Write permissions for data files
 
-## 📞 پشتیبانی | Support
+## 📖 نحوه استفاده / Usage Guide
 
-- 🐛 گزارش باگ: [Issues](../../issues)
-- 💡 درخواست ویژگی: [Feature Requests](../../issues)
-- 📖 مستندات: [Wiki](../../wiki)
+### شروع کار / Getting Started
 
-## ⚠️ اخلاق و قانون | Ethics & Legal
+1. ربات را در تلگرام پیدا کنید و `/start` بزنید
+2. از منوی کیبورد گزینه مورد نظر را انتخاب کنید
 
-این ابزار صرفاً برای اهداف آموزشی و مشروع طراحی شده است. کاربران مسئول رعایت قوانین محلی و شرایط استفاده تلگرام هستند.
+Find your bot on Telegram and send `/start`, then use the keyboard menu
+
+### افزودن اکانت / Adding Accounts
+
+1. گزینه "➕ افزودن اکانت" را انتخاب کنید
+2. شماره تلفن را وارد کنید (مثال: `+989123456789`)
+
+Select "➕ افزودن اکانت" and enter phone number (example: `+989123456789`)
+
+### بررسی وضعیت اکانت‌ها / Check Account Status
+
+گزینه "📊 وضعیت اکانت‌ها" را انتخاب کنید تا آمار کامل مشاهده کنید:
+
+Select "📊 وضعیت اکانت‌ها" to view complete statistics:
+
+- ✅ سالم / Healthy
+- ⚠️ محدود / Limited  
+- ❌ بن / Banned
+- ⭕ آفلاین / Offline
+
+### انالیز گروه / Group Analysis
+
+1. گزینه "🔍 انالیز گروه" را انتخاب کنید
+2. شناسه گروه را وارد کنید (مثال: `-1001234567890`)
+
+Select "🔍 انالیز گروه" and enter group ID (example: `-1001234567890`)
+
+### مشاهده لیست ممبرها / View Member Lists
+
+گزینه "👥 لیست ممبرها" را انتخاب کنید تا تمام ممبرهای استخراج شده را ببینید
+
+Select "👥 لیست ممبرها" to view all extracted members
+
+### ارسال پیام خصوصی / Send Private Messages
+
+فرمت: `send:group_id:پیام شما`
+
+Format: `send:group_id:your_message`
+
+مثال / Example:
+```
+send:-1001234567890:سلام! این یک پیام تبلیغاتی است
+```
+
+## 🔧 تنظیمات پیشرفته / Advanced Configuration
+
+### فایل config.php
+
+```php
+define('MAX_ACCOUNTS', 100);        // حداکثر تعداد اکانت
+define('MESSAGE_DELAY', 500000);    // تاخیر بین پیام‌ها (میکروثانیه)
+define('MAX_RETRIES', 3);           // حداکثر تلاش مجدد
+```
+
+### لاگ‌ها / Logs
+
+تمام فعالیت‌ها در فایل `bot_logs.txt` ثبت می‌شوند
+
+All activities are logged in `bot_logs.txt`
+
+## ⚠️ نکات امنیتی / Security Notes
+
+1. هرگز توکن ربات خود را به اشتراک نگذارید / Never share your bot token
+2. فقط به ادمین مجاز دسترسی دهید / Only give access to authorized admin
+3. فایل‌های حساس را از دسترسی عمومی محافظت کنید / Protect sensitive files from public access
+4. به‌طور منظم فایل‌های لاگ را بررسی کنید / Regularly check log files
+
+## 🐛 عیب‌یابی / Troubleshooting
+
+### مشکلات رایج / Common Issues
+
+1. **ربات پاسخ نمی‌دهد / Bot not responding:**
+   - توکن و webhook را بررسی کنید / Check token and webhook
+   - لاگ‌های سرور را مطالعه کنید / Check server logs
+
+2. **خطای مجوز فایل / File permission error:**
+   - مجوز نوشتن فایل‌ها را بررسی کنید / Check file write permissions
+   - مالکیت فایل‌ها را تنظیم کنید / Set proper file ownership
+
+3. **خطای JSON / JSON error:**
+   - پسوند JSON در PHP فعال باشد / Ensure JSON extension is enabled
+   - ساختار فایل‌های JSON را بررسی کنید / Validate JSON file structure
+
+## 📞 پشتیبانی / Support
+
+برای گزارش باگ یا پیشنهادات بهبود، لطفاً issue جدید ایجاد کنید
+
+For bug reports or feature requests, please create a new issue
+
+## 📄 مجوز / License
+
+این پروژه تحت مجوز MIT منتشر شده است
+
+This project is released under the MIT License
 
 ---
 
-**نکته**: این ربات به منظور آموزش و استفاده مشروع طراحی شده است. لطفاً از آن سوءاستفاده نکنید.
+**تاریخ آخرین بروزرسانی / Last Updated:** 2024
 
-**Note**: This bot is designed for educational and legitimate purposes. Please do not misuse it.
+**نسخه / Version:** 1.0.0
