@@ -1,13 +1,13 @@
 <?php
 // Bot Configuration
-define('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE'); // Replace with your actual bot token
-define('ADMIN_ID', 123456789); // Replace with your Telegram user ID
+define('BOT_TOKEN', '7624862714:AAEB93kWba5pzpoWrOa7O_7aOOxDHAKq6ug');
+define('ADMIN_ID', 7388512919);
 
 // Database Configuration
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'telegram_bot');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_NAME', 'a1156450_solitack');
+define('DB_USER', 'a1156450_solitack');
+define('DB_PASS', 'solitack');
 
 // Bot Settings
 define('BOT_NAME', 'Instagram Downloader Bot');
